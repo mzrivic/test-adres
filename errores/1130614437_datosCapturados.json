@@ -1,0 +1,24 @@
+{
+  "datosBasicos": {
+    "TIPO DE IDENTIFICACIÓN": "CC",
+    "NÚMERO DE IDENTIFICACION": "1130614437",
+    "FECHA DE NACIMIENTO": "**/**/**",
+    "DEPARTAMENTO": "VALLE",
+    "MUNICIPIO": "SANTIAGO DE CALI",
+    "PRIMER_NOMBRE": "WILMER",
+    "SEGUNDO_NOMBRE": "",
+    "PRIMER_APELLIDO": "GONZALEZ",
+    "SEGUNDO_APELLIDO": "ALVAREZ"
+  },
+  "datosAfiliacion": [
+    {
+      "estado": "RETIRADO",
+      "entidad": "NUEVA EPS S.A.",
+      "regimen": "CONTRIBUTIVO",
+      "fechaAfiliacionEfectiva": "17/01/2014",
+      "fechaFinalizacionAfiliacion": "02/01/2024",
+      "tipoAfiliado": "COTIZANTE"
+    }
+  ],
+  "fechaProceso": "09/25/2024 18:22:16"
+}
