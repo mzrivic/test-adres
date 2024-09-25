@@ -3,7 +3,7 @@
   "routes": [
     {
       "src": "/api/procesar",    
-      "dest": "/api/procesar.js" 
+      "dest": "/api/index.js" 
     }
   ]
 }
