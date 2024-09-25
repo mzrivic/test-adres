@@ -323,8 +323,7 @@ async function procesarFormulario(page, clientId) {
 }
 
 
-
-app.post('/procesar', async (req, res) => {
+app.post('/api/procesar', async (req, res) => {
     const { clientId, clientType } = req.body;
 
     if (!clientId || !clientType) {
@@ -342,13 +341,7 @@ app.post('/procesar', async (req, res) => {
 
         const browser = await chromium.launch({
             headless: true,
-            args: [
-                '--disable-infobars',
-                '--disable-web-security',
-                '--allow-running-insecure-content',
-                '--no-sandbox',
-                '--disable-setuid-sandbox'
-            ]
+            args: ['--no-sandbox', '--disable-setuid-sandbox']
         });
 
         const context = await browser.newContext({
@@ -359,14 +352,14 @@ app.post('/procesar', async (req, res) => {
         const page = await context.newPage();
         await page.goto('https://aplicaciones.adres.gov.co/bdua_internet/Pages/ConsultarAfiliadoWeb.aspx');
 
-        // Lógica para capturar fecha, tipo de documento y número de documento
+        // Lógica para capturar fecha, tipo de documento y número de documento (completar)
         const fechaData = await capturarFecha(page);
         fs.writeFileSync(path.join(directorioErrores, 'fecha.json'), JSON.stringify(fechaData, null, 2));
 
         await seleccionarTipoDocumento(page, clientType);
         await ingresarNumeroDocumento(page, clientId);
 
-        // Generar y resolver el CAPTCHA
+        // Captcha
         await generarNuevaImagenCaptcha(page);
         await page.waitForTimeout(5000);
         const captchaPath = await descargarCaptcha(page);
@@ -379,7 +372,7 @@ app.post('/procesar', async (req, res) => {
         }
 
         // Procesar el formulario
-        const datos = await procesarFormulario(page, clientId); // Obtener datos procesados
+        const datos = await procesarFormulario(page, clientId); // Completa con tu lógica
 
         await browser.close();
 
