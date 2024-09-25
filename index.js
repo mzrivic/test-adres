@@ -263,64 +263,6 @@ async function obtenerFechaProceso(nuevaPagina) {
 
 
 
-// async function procesarFormulario(page, clientId) {
-//     try {
-//         // Enviar el formulario
-//         await enviarFormulario(page);
-
-//         // Esperar un tiempo para dar oportunidad a que se abra la nueva pestaña
-//         await page.waitForTimeout(2000); // Ajusta este valor si es necesario
-
-//         // Obtener todas las pestañas abiertas
-//         const pages = await page.context().pages();
-
-//         // Filtrar la nueva pestaña basándonos en la URL que sabemos que se abre
-//         const nuevaPagina = pages.find(p => p.url().includes('RespuestaConsulta.aspx'));
-
-//         if (!nuevaPagina) {
-//             throw new Error('No se encontró la nueva pestaña');
-//         }
-
-//         // Esperar un tiempo para asegurar que la página se cargue completamente
-//         await nuevaPagina.waitForTimeout(2000);
-
-//         // Esperar a que los selectores necesarios estén presentes
-//         await Promise.all([
-//             nuevaPagina.waitForSelector('#GridViewBasica', { timeout: 10000 }), // Espera hasta 10 segundos por el selector
-//             nuevaPagina.waitForSelector('#GridViewAfiliacion', { timeout: 10000 }),
-//             nuevaPagina.waitForSelector('#lblProceso', { timeout: 10000 })
-//         ]);
-
-//         // Capturar los datos de la nueva pestaña
-//         const datosBasicos = await obtenerDatosBasicos(nuevaPagina);
-//         const datosAfiliacion = await obtenerDatosAfiliacion(nuevaPagina);
-//         const fechaProceso = await obtenerFechaProceso(nuevaPagina);
-
-//         // Estructurar los datos capturados
-//         const datosCapturados = {
-//             datosBasicos,
-//             datosAfiliacion,
-//             fechaProceso
-//         };
-
-//         // Guardar los datos en un archivo JSON
-//         const jsonFilePath = path.join(directorioErrores, `${clientId}_datosCapturados.json`);
-//         fs.writeFileSync(jsonFilePath, JSON.stringify(datosCapturados, null, 2));
-//         console.log('Datos capturados y guardados:', datosCapturados);
-
-//         // Tomar una captura de pantalla de la nueva pestaña
-//         const screenshotPath = path.join(directorioCapturas, `${clientId}_resultado.png`);
-//         await nuevaPagina.screenshot({ path: screenshotPath });
-//         console.log('Captura de pantalla guardada en:', screenshotPath);
-
-//     } catch (error) {
-//         console.error('Error al procesar la nueva página:', error);
-//     }
-// }
-
-
-
-// Ruta POST en Express para recibir la solicitud
 
 
 // Función modificada para devolver los datos capturados
