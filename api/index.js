@@ -393,11 +393,4 @@ app.post('/procesar', async (req, res) => {
     }
 });
 
-
-// Funciones adicionales como 'enviarFormulario', 'capturarFecha', etc.
-// Aquí podrías incluir las funciones que mencionaste en tu código original.
-
-// Iniciar el servidor en el puerto 3000
-app.listen(3000, () => {
-    console.log('Servidor Express escuchando en el puerto 3000');
-});
+module.exports = app;
