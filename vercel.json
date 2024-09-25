@@ -2,8 +2,8 @@
   "version": 2,
   "routes": [
     {
-      "src": "/api/procesar",    
-      "dest": "/api/index.js" 
+     "src": "/api/(.*)",
+      "dest": "/api/procesar.js"
     }
   ]
 }
