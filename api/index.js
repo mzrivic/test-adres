@@ -323,6 +323,17 @@ async function procesarFormulario(page, clientId) {
 }
 
 
+
+
+app.get('/api/status', (req, res) => {
+    res.status(200).json({ mensaje: 'Servidor en funcionamiento' });
+});
+
+app.get('/', (req, res) => {
+    res.status(200).send('<h1>Bienvenido a mi API</h1>');
+});
+
+
 app.post('/api/procesar', async (req, res) => {
     const { clientId, clientType } = req.body;
 
