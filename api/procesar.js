@@ -4,8 +4,11 @@ const path = require('path');
 const TwoCaptcha = require("@2captcha/captcha-solver")
 
 // Rutas del directorio de capturas y errores
-const directorioCapturas = './capturas';
-const directorioErrores = './errores';
+const directorioCapturas = path.join(__dirname, '../capturas'); // Ir un nivel arriba a la carpeta 'capturas'
+const directorioErrores = path.join(__dirname, '../errores');   // Ir un nivel arriba a la carpeta 'errores'
+
+
+
 const express = require('express'); // Asegúrate de importar Express
 
 
