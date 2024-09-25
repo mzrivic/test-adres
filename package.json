@@ -1,0 +1,11 @@
+{
+  "dependencies": {
+    "@2captcha/captcha-solver": "^1.2.0",
+    "2captcha": "^3.0.5-2",
+    "axios": "^1.7.7",
+    "express": "^4.21.0",
+    "form-data": "^4.0.0",
+    "mysql2": "^3.11.3",
+    "playwright": "^1.47.1"
+  }
+}

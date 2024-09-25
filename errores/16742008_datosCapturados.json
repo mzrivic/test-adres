@@ -1,0 +1,24 @@
+{
+  "datosBasicos": {
+    "TIPO DE IDENTIFICACIÓN": "CC",
+    "NÚMERO DE IDENTIFICACION": "16742008",
+    "FECHA DE NACIMIENTO": "**/**/**",
+    "DEPARTAMENTO": "VALLE",
+    "MUNICIPIO": "SANTIAGO DE CALI",
+    "PRIMER_NOMBRE": "JUAN",
+    "SEGUNDO_NOMBRE": "CARLOS",
+    "PRIMER_APELLIDO": "MILLAN",
+    "SEGUNDO_APELLIDO": "VILA"
+  },
+  "datosAfiliacion": [
+    {
+      "estado": "ACTIVO",
+      "entidad": "ENTIDAD PROMOTORA DE SALUD SANITAS S.A.S.",
+      "regimen": "CONTRIBUTIVO",
+      "fechaAfiliacionEfectiva": "01/06/2018",
+      "fechaFinalizacionAfiliacion": "31/12/2999",
+      "tipoAfiliado": "COTIZANTE"
+    }
+  ],
+  "fechaProceso": "09/25/2024 15:01:05"
+}
