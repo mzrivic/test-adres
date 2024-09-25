@@ -17,19 +17,21 @@ app.use(express.json());
 
 
 
-async function resolverCaptcha(captchaPath) {
+
+// Función para resolver el CAPTCHA
+async function resolverCaptcha(captchaImageBuffer) {
     const apiKey = '3bb0ce42560f7ce77d0fe0fe1c633238'; // Reemplaza con tu clave API de 2Captcha
     const solver = new TwoCaptcha.Solver(apiKey);
 
     try {
-        // Verifica si el archivo CAPTCHA existe
-        if (!fs.existsSync(captchaPath)) {
-            console.error("El archivo CAPTCHA no se encuentra en la ruta especificada.");
+        // Verifica si el buffer de la imagen CAPTCHA está definido
+        if (!captchaImageBuffer) {
+            console.error("El buffer de la imagen CAPTCHA no está definido.");
             return null;
         }
 
-        // Lee la imagen y la convierte a base64
-        const imageBase64 = fs.readFileSync(captchaPath, 'base64');
+        // Convierte el buffer de la imagen a base64
+        const imageBase64 = captchaImageBuffer.toString('base64');
 
         // Envía el CAPTCHA a 2Captcha
         const response = await solver.imageCaptcha({
@@ -53,8 +55,6 @@ async function resolverCaptcha(captchaPath) {
         return null;
     }
 }
-
-
 
 
 
@@ -129,6 +129,7 @@ async function generarNuevaImagenCaptcha(page) {
 
 
 
+
 // Función para descargar la imagen CAPTCHA
 async function descargarCaptcha(page) {
     const captchaSelector = '#Capcha_CaptchaImageUP';
@@ -137,20 +138,18 @@ async function descargarCaptcha(page) {
     await page.waitForSelector(captchaSelector);
 
     // Tomar una captura de pantalla de la imagen CAPTCHA
-    const captchaPath = path.join(directorioCapturas, '1-captcha.png');
     const captchaBox = await page.locator(captchaSelector).boundingBox();
     
     if (captchaBox) {
-        await page.screenshot({ path: captchaPath, clip: captchaBox });
-        console.log('Captcha guardado en:', captchaPath);
-        return captchaPath; // Devolver la ruta de la imagen
+        // Cambia esta línea a una captura de pantalla simple
+        const screenshot = await page.screenshot({ type: 'png', clip: captchaBox });
+        console.log('Captcha guardado en memoria.');
+        return screenshot; // Devolver el buffer de la imagen
     } else {
         console.error("No se encontró el elemento CAPTCHA.");
         return null;
     }
 }
-
-
 
 
 
