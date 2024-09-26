@@ -329,9 +329,7 @@ app.post('/api/procesar', async (req, res) => {
     }
 
     try {
-        // Crear los directorios si no existen
-        if (!fs.existsSync(directorioCapturas)) fs.mkdirSync(directorioCapturas);
-        if (!fs.existsSync(directorioErrores)) fs.mkdirSync(directorioErrores);
+       
 
      
         const browser = await chromium.launch({
