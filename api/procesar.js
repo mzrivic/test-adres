@@ -66,15 +66,6 @@ async function resolverCaptcha(captchaImageBuffer) {
 
 
 
-// Función para limpiar archivos en un directorio
-function limpiarDirectorio(directorio) {
-    if (fs.existsSync(directorio)) {
-        fs.readdirSync(directorio).forEach((archivo) => {
-            fs.unlinkSync(path.join(directorio, archivo));
-        });
-    }
-}
-
 
 
 // Función para capturar la fecha
@@ -342,10 +333,7 @@ app.post('/api/procesar', async (req, res) => {
         if (!fs.existsSync(directorioCapturas)) fs.mkdirSync(directorioCapturas);
         if (!fs.existsSync(directorioErrores)) fs.mkdirSync(directorioErrores);
 
-        // Limpiar directorios
-        limpiarDirectorio(directorioCapturas);
-        limpiarDirectorio(directorioErrores);
-
+     
         const browser = await chromium.launch({
             headless: true,
             args: ['--no-sandbox', '--disable-setuid-sandbox']
