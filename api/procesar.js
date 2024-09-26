@@ -184,7 +184,6 @@ async function ingresarCodigoCaptcha(page, codigo) {
  
     } catch (error) {
         console.error("Error al ingresar el código CAPTCHA:", error);
-        await page.screenshot({ path: path.join(directorioCapturas, 'pagina_error.png') });
     }
 }
 
@@ -305,15 +304,8 @@ async function procesarFormulario(page, clientId) {
             fechaProceso
         };
 
-        // Guardar los datos en un archivo JSON
-        const jsonFilePath = path.join(directorioErrores, `${clientId}_datosCapturados.json`);
-        fs.writeFileSync(jsonFilePath, JSON.stringify(datosCapturados, null, 2));
-        console.log('Datos capturados y guardados:', datosCapturados);
-
-        // Tomar una captura de pantalla de la nueva pestaña
-        const screenshotPath = path.join(directorioCapturas, `${clientId}_resultado.png`);
-        await nuevaPagina.screenshot({ path: screenshotPath });
-        console.log('Captura de pantalla guardada en:', screenshotPath);
+        // (Opcional) Procesar los datos capturados según sea necesario
+        console.log('Datos capturados:', datosCapturados);
 
         // Retornar los datos capturados
         return datosCapturados;
@@ -323,6 +315,8 @@ async function procesarFormulario(page, clientId) {
         throw error;
     }
 }
+
+
 
 
 
@@ -367,7 +361,6 @@ app.post('/api/procesar', async (req, res) => {
 
         // Lógica para capturar fecha, tipo de documento y número de documento (completar)
         const fechaData = await capturarFecha(page);
-        fs.writeFileSync(path.join(directorioErrores, 'fecha.json'), JSON.stringify(fechaData, null, 2));
 
         await seleccionarTipoDocumento(page, clientType);
         await ingresarNumeroDocumento(page, clientId);
