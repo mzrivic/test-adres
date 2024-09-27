@@ -10,6 +10,7 @@ const directorioErrores = path.join(__dirname, '../errores');   // Ir un nivel a
 
 
 const express = require('express'); // Asegúrate de importar Express
+const port = 3000; // Puedes cambiar el puerto si lo deseas
 
 
 const app = express();
@@ -376,6 +377,12 @@ app.post('/api/procesar', async (req, res) => {
         console.error('Error en el proceso:', error);
         res.status(500).send('Error al procesar el formulario');
     }
+});
+
+
+// Inicia el servidor
+app.listen(port, () => {
+    console.log(`Servidor escuchando en http://localhost:${port}`);
 });
 
 module.exports = app;
