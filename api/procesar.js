@@ -382,7 +382,7 @@ app.post('/api/procesar', async (req, res) => {
 
 // Inicia el servidor
 app.listen(port, () => {
-    console.log(`Servidor escuchando en http://localhost:${port}`);
+    console.log(`Servidor escuchando en prueba http://localhost:${port}`);
 });
 
 module.exports = app;
