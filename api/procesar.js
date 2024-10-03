@@ -1,12 +1,11 @@
+
+
 const { chromium } = require('playwright');
 const fs = require('fs');
 const path = require('path');
 const TwoCaptcha = require("@2captcha/captcha-solver")
-
-// Rutas del directorio de capturas y errores
-const directorioCapturas = path.join(__dirname, '../capturas'); // Ir un nivel arriba a la carpeta 'capturas'
-const directorioErrores = path.join(__dirname, '../errores');   // Ir un nivel arriba a la carpeta 'errores'
-
+const http = require('http'); // Asegúrate de importar el módulo http
+const WebSocket = require('ws'); // Importar el módulo WebSocket
 
 
 const express = require('express'); // Asegúrate de importar Express
@@ -15,7 +14,6 @@ const port = 3000; // Puedes cambiar el puerto si lo deseas
 
 const app = express();
 app.use(express.json());
-
 
 
 
@@ -69,16 +67,6 @@ async function resolverCaptcha(captchaImageBuffer) {
 
 
 
-// Función para capturar la fecha
-async function capturarFecha(page) {
-    try {
-        const fecha = await page.$eval('#lblfecha', el => el.textContent.trim());
-        return { fecha };
-    } catch (error) {
-        console.error("Error al capturar la fecha:", error);
-        return { fecha: null };
-    }
-}
 
 // Función para seleccionar el tipo de documento
 async function seleccionarTipoDocumento(page, tipoDoc) {
@@ -90,19 +78,8 @@ async function ingresarNumeroDocumento(page, numero) {
     await page.fill('#txtNumDoc', numero);
 }
 
-// Función para capturar errores de validación
-async function capturarErrores(page) {
-    const errores = {};
-    const errorCampos = ['#Error', '#RegularExpressionValidator1', '#RequiredFieldValidator1', '#Capcha_ctl00'];
 
-    for (const selector of errorCampos) {
-        const visibilidad = await page.$eval(selector, el => window.getComputedStyle(el).visibility);
-        if (visibilidad !== 'hidden') {
-            errores[selector] = await page.$eval(selector, el => el.textContent.trim());
-        }
-    }
-    return errores;
-}
+
 
 
 async function generarNuevaImagenCaptcha(page) {
@@ -114,11 +91,12 @@ async function generarNuevaImagenCaptcha(page) {
         await page.click('#Capcha_CaptchaLinkButton');
         console.log('Se ha generado una nueva imagen CAPTCHA');
         
+        return { success: true, message: 'Imagen CAPTCHA generada correctamente.' }; // Retorna éxito
     } catch (error) {
         console.error('Error al generar la nueva imagen CAPTCHA:', error);
+        return { success: false, message: 'No se pudo generar la nueva imagen CAPTCHA.' }; // Retorna error
     }
 }
-
 
 
 
@@ -309,19 +287,58 @@ async function procesarFormulario(page, clientId) {
 }
 
 
+// Crear servidor HTTP y WebSocket
+const server = http.createServer(app);
+const wss = new WebSocket.Server({ server });
+
+let clients = [];
+
+// Manejar conexiones WebSocket
+wss.on('connection', (ws) => {
+    console.log('Cliente conectado');
+    clients.push(ws);
+
+    ws.on('close', () => {
+        console.log('Cliente desconectado');
+        clients = clients.filter(client => client !== ws);
+    });
+});
+
+// Función para enviar actualizaciones a todos los clientes conectados
+function enviarActualizacion(data) {
+    clients.forEach(client => {
+        if (client.readyState === WebSocket.OPEN) {
+            client.send(JSON.stringify(data));
+        }
+    });
+}
 
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+// Ruta de estado del servidor
 app.get('/api/status', (req, res) => {
     res.status(200).json({ mensaje: 'Servidor en funcionamiento' });
 });
 
+// Ruta de bienvenida
 app.get('/', (req, res) => {
     res.status(200).send('<h1>Bienvenido a mi API</h1>');
 });
 
-
+// Ruta para procesar datos
 app.post('/api/procesar', async (req, res) => {
     const { clientId, clientType } = req.body;
 
@@ -330,9 +347,6 @@ app.post('/api/procesar', async (req, res) => {
     }
 
     try {
-       
-
-     
         const browser = await chromium.launch({
             headless: true,
             args: ['--no-sandbox', '--disable-setuid-sandbox']
@@ -344,20 +358,78 @@ app.post('/api/procesar', async (req, res) => {
         });
 
         const page = await context.newPage();
-        await page.goto('https://aplicaciones.adres.gov.co/bdua_internet/Pages/ConsultarAfiliadoWeb.aspx');
 
-        // Lógica para capturar fecha, tipo de documento y número de documento (completar)
-        const fechaData = await capturarFecha(page);
+        // Intentamos cargar la página con un timeout de 15 segundos
+        try {
+            await page.goto('https://aplicaciones.adres.gov.co/bdua_internet/Pages/ConsultarAfiliadoWeb.aspx', { timeout: 15000 });
+            enviarActualizacion({ message: 'La página se ha cargado correctamente.' });
+        } catch (navigationError) {
+            await browser.close();
+            return res.status(502).json({ error: 'La página del servicio no está disponible o no se pudo cargar. Inténtalo más tarde.' });
+        }
 
-        await seleccionarTipoDocumento(page, clientType);
-        await ingresarNumeroDocumento(page, clientId);
+        // Verificar que el elemento clave esté presente
+        const selectorbtnConsultar = '#btnConsultar'; // Cambia este selector según corresponda
+        const existeBtnConsulta = await page.$(selectorbtnConsultar);
+
+        if (!existeBtnConsulta) {
+            await browser.close();
+            return res.status(503).json({ error: 'La página se cargó, pero los elementos necesarios no están disponibles.' });
+        } else {
+            enviarActualizacion({ message: 'El elemento necesario está disponible y la página se puede procesar.' });
+        }
+
+        // Intentamos seleccionar el tipo de documento
+        try {
+            await seleccionarTipoDocumento(page, clientType);
+            enviarActualizacion({ message: 'Tipo de documento seleccionado correctamente.' });
+        } catch (error) {
+            console.error('Error al seleccionar el tipo de documento:', error);
+            await browser.close();
+            return res.status(500).json({ error: 'No se pudo seleccionar el tipo de documento.' });
+        }
+
+        // Intentamos ingresar el número de documento
+        try {
+            await ingresarNumeroDocumento(page, clientId);
+            enviarActualizacion({ message: 'Número de documento ingresado correctamente.' });
+        } catch (error) {
+            console.error('Error al ingresar el número de documento:', error);
+            await browser.close();
+            return res.status(500).json({ error: 'No se pudo ingresar el número de documento.' });
+        }
+
+
+
+        
 
         // Captcha
-        await generarNuevaImagenCaptcha(page);
+        const resultadoCaptcha = await generarNuevaImagenCaptcha(page);
+
+        if (!resultadoCaptcha.success) {
+            await browser.close();
+            return res.status(500).json({ error: resultadoCaptcha.message });
+        }
+
+
+
+
+
+
+
+
         await page.waitForTimeout(5000);
+
         const captchaPath = await descargarCaptcha(page);
-        const codigoCaptcha = await resolverCaptcha(captchaPath);
+
+
+
+
+
+
         
+        const codigoCaptcha = await resolverCaptcha(captchaPath);
+
         if (codigoCaptcha) {
             await ingresarCodigoCaptcha(page, codigoCaptcha);
         } else {
@@ -366,7 +438,6 @@ app.post('/api/procesar', async (req, res) => {
 
         // Procesar el formulario
         const datos = await procesarFormulario(page, clientId); // Completa con tu lógica
-
         await browser.close();
 
         res.status(200).json({
@@ -379,9 +450,8 @@ app.post('/api/procesar', async (req, res) => {
     }
 });
 
-
 // Inicia el servidor
-app.listen(port, () => {
+server.listen(port, () => {
     console.log(`Servidor escuchando en prueba http://localhost:${port}`);
 });
 
