@@ -1,19 +1,21 @@
 
-
 const { chromium } = require('playwright');
 const fs = require('fs');
 const path = require('path');
-const TwoCaptcha = require("@2captcha/captcha-solver")
-const http = require('http'); // Asegúrate de importar el módulo http
-const WebSocket = require('ws'); // Importar el módulo WebSocket
+const TwoCaptcha = require("@2captcha/captcha-solver");
+const http = require('http');
+const WebSocket = require('ws');
+const express = require('express');
 
-
-const express = require('express'); // Asegúrate de importar Express
-const port = 3000; // Puedes cambiar el puerto si lo deseas
-
-
+const port = 3000;
 const app = express();
 app.use(express.json());
+
+// Crear servidor HTTP y WebSocket
+const server = http.createServer(app);
+const wss = new WebSocket.Server({ server });
+
+let clients = [];
 
 
 
@@ -44,7 +46,11 @@ async function resolverCaptcha(captchaImageBuffer) {
 
         // Verifica el estado de la respuesta
         if (response.status === 1) {
-            return response.data; // Devuelve el código del CAPTCHA resuelto
+            // return response.data; // Devuelve el código del CAPTCHA resuelto
+
+
+            return {data: response.status, data: response.data, id: response.id}; // Devuelve el código del CAPTCHA resuelto junto con el id
+
         } else {
             console.error("Error al enviar CAPTCHA:", response.request);
             return null;
@@ -81,7 +87,6 @@ async function ingresarNumeroDocumento(page, numero) {
 
 
 
-
 async function generarNuevaImagenCaptcha(page) {
     try {
         // Esperar a que el enlace esté disponible en la página
@@ -100,29 +105,38 @@ async function generarNuevaImagenCaptcha(page) {
 
 
 
+
 // Función para descargar la imagen CAPTCHA
 async function descargarCaptcha(page) {
     const captchaSelector = '#Capcha_CaptchaImageUP';
     
-    // Esperar a que la imagen esté visible
-    await page.waitForSelector(captchaSelector);
+    try {
+        // Esperar a que la imagen esté visible
+        await page.waitForSelector(captchaSelector, { timeout: 5000 });
 
-    // Tomar una captura de pantalla de la imagen CAPTCHA
-    const captchaBox = await page.locator(captchaSelector).boundingBox();
-    
-    if (captchaBox) {
-        // Cambia esta línea a una captura de pantalla simple
-        const screenshot = await page.screenshot({ type: 'png', clip: captchaBox });
-        console.log('Captcha guardado en memoria.');
-        return screenshot; // Devolver el buffer de la imagen
-    } else {
-        console.error("No se encontró el elemento CAPTCHA.");
-        return null;
+        // Obtener el tamaño del elemento que contiene el CAPTCHA
+        const captchaBox = await page.locator(captchaSelector).boundingBox();
+        
+        if (captchaBox) {
+            // Tomar una captura de pantalla de la imagen CAPTCHA
+            const screenshotBuffer = await page.screenshot({ type: 'png', clip: captchaBox });
+
+            // Convertir el buffer a base64
+            const screenshotBase64 = screenshotBuffer.toString('base64');
+
+            console.log('Captcha guardado en memoria y convertido a base64.');
+
+            // Retornar éxito y la imagen en base64
+            return { success: true, message: 'Captcha descargado correctamente.', screenshot: screenshotBase64 };
+        } else {
+            console.error("No se encontró el elemento CAPTCHA.");
+            return { success: false, message: 'No se encontró el elemento CAPTCHA.', screenshot: null };
+        }
+    } catch (error) {
+        console.error('Error al descargar la imagen CAPTCHA:', error);
+        return { success: false, message: 'Error al descargar la imagen CAPTCHA.', screenshot: null };
     }
 }
-
-
-
 
 
 
@@ -163,7 +177,24 @@ async function enviarFormulario(page) {
 
     
     await page.click('#btnConsultar');
+
+
+
+
+
 }
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -236,26 +267,80 @@ async function obtenerFechaProceso(nuevaPagina) {
 
 
 
+// // Función modificada para devolver los datos capturados
+// async function procesarFormulario(page, clientId) {
+//     try {
+       
+
+//         // Obtener todas las pestañas abiertas
+//         const pages = await page.context().pages();
+
+//         // Filtrar la nueva pestaña basándonos en la URL que sabemos que se abre
+//         const nuevaPagina = pages.find(p => p.url().includes('RespuestaConsulta.aspx'));
+
+//         if (!nuevaPagina) {
+//             throw new Error('No se encontró la nueva pestaña');
+//         }
+
+//         // Esperar a que los selectores necesarios estén presentes
+//         await Promise.all([
+//             nuevaPagina.waitForSelector('#GridViewBasica', { timeout: 10000 }), // Espera hasta 10 segundos por el selector
+//             nuevaPagina.waitForSelector('#GridViewAfiliacion', { timeout: 10000 }),
+//             nuevaPagina.waitForSelector('#lblProceso', { timeout: 10000 })
+//         ]);
+
+//         // Capturar los datos de la nueva pestaña
+//         const datosBasicos = await obtenerDatosBasicos(nuevaPagina);
+//         const datosAfiliacion = await obtenerDatosAfiliacion(nuevaPagina);
+//         const fechaProceso = await obtenerFechaProceso(nuevaPagina);
+
+//         // Estructurar los datos capturados
+//         const datosCapturados = {
+//             datosBasicos,
+//             datosAfiliacion,
+//             fechaProceso
+//         };
+
+//         // (Opcional) Procesar los datos capturados según sea necesario
+//         console.log('Datos capturados:', datosCapturados);
+
+//         // Retornar los datos capturados
+//         return datosCapturados;
+
+//     } catch (error) {
+//         console.error('Error al procesar la nueva página:', error);
+//         throw error;
+//     }
+// }
+
+
+
+
 // Función modificada para devolver los datos capturados
 async function procesarFormulario(page, clientId) {
     try {
-        // Enviar el formulario
-        await enviarFormulario(page);
-
-        // Esperar un tiempo para dar oportunidad a que se abra la nueva pestaña
-        await page.waitForTimeout(2000); // Ajusta este valor si es necesario
-
         // Obtener todas las pestañas abiertas
         const pages = await page.context().pages();
 
         // Filtrar la nueva pestaña basándonos en la URL que sabemos que se abre
         const nuevaPagina = pages.find(p => p.url().includes('RespuestaConsulta.aspx'));
 
+        // Verificar si se encontró la nueva pestaña
         if (!nuevaPagina) {
-            throw new Error('No se encontró la nueva pestaña');
+            const errorMessage = 'No se encontró la nueva pestaña';
+            console.error('Error encontrado:', errorMessage);
+            return { error: errorMessage }; // Retornar error para manejarlo después
         }
 
-        // Esperar a que los selectores necesarios estén presentes
+        // Verificar si hay un mensaje de error en la nueva pestaña
+        const errorLabel = await nuevaPagina.$('#lblError');
+        if (errorLabel) {
+            const errorMessage = await errorLabel.evaluate(el => el.textContent);
+            console.error('Error encontrado:', errorMessage);
+            return { error: errorMessage }; // Retornar error para manejarlo después
+        }
+
+        // Si no hay error, esperar a que los selectores necesarios estén presentes
         await Promise.all([
             nuevaPagina.waitForSelector('#GridViewBasica', { timeout: 10000 }), // Espera hasta 10 segundos por el selector
             nuevaPagina.waitForSelector('#GridViewAfiliacion', { timeout: 10000 }),
@@ -278,31 +363,69 @@ async function procesarFormulario(page, clientId) {
         console.log('Datos capturados:', datosCapturados);
 
         // Retornar los datos capturados
-        return datosCapturados;
+        return { datos: datosCapturados };
 
     } catch (error) {
-        console.error('Error al procesar la nueva página:', error);
-        throw error;
+        console.error('Error al procesar la nueva página:', error.message);
+        return { error: error.message }; // Retornar error para manejarlo después
     }
 }
 
 
-// Crear servidor HTTP y WebSocket
-const server = http.createServer(app);
-const wss = new WebSocket.Server({ server });
 
-let clients = [];
+
+
+
+
+
+
+
+
+// Función para verificar si el elemento contiene visibility:hidden en su atributo style
+async function verificarVisibilidad(page, idElemento) {
+    return await page.evaluate((idElemento) => {
+        const elemento = document.getElementById(idElemento);
+        if (elemento && elemento.getAttribute('style') !== null) {
+            const estilo = elemento.getAttribute('style');
+            return estilo.includes('visibility:hidden'); // Retorna true si contiene 'visibility:hidden', false si no
+        }
+        return false; // Si el elemento no tiene el atributo 'style' o no existe
+    }, idElemento);
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 // Manejar conexiones WebSocket
-wss.on('connection', (ws) => {
+wss.on('connection', (socket) => {
     console.log('Cliente conectado');
-    clients.push(ws);
+    clients.push(socket);
 
-    ws.on('close', () => {
+    socket.on('close', () => {
         console.log('Cliente desconectado');
-        clients = clients.filter(client => client !== ws);
+        clients = clients.filter(client => client !== socket);
     });
 });
+
+// Función para enviar mensajes a todos los clientes conectados
+const sendToAllClients = (message) => {
+    clients.forEach(client => {
+        if (client.readyState === WebSocket.OPEN) {
+            client.send(message);
+        }
+    });
+};
 
 // Función para enviar actualizaciones a todos los clientes conectados
 function enviarActualizacion(data) {
@@ -317,10 +440,16 @@ function enviarActualizacion(data) {
 
 
 
-
-
-
-
+// Función para obtener la clase de un elemento
+async function obtenerClase(page, elementId) {
+    const element = await page.$(`#${elementId}`);
+    if (element) {
+        // Obtener la propiedad de estilo visibility
+        const visibility = await element.evaluate(el => el.style.visibility);
+        return visibility; // Devuelve el valor de visibility
+    }
+    return null; // Devuelve null si el elemento no se encuentra
+}
 
 
 
@@ -401,26 +530,228 @@ app.post('/api/procesar', async (req, res) => {
 
 
 
-        
+
+
+
+
+
+
+
+
+
+
+// // Verificar si el error está presente
+// const errorTexto = await verificarErrorNumeroIdentificacion(page);
+
+// // Dentro del bloque donde manejas el error
+// if (errorTexto) {
+//     console.log('El mensaje de error está presente:', errorTexto);
+
+//     // Envía un mensaje de error al cliente
+//     sendToAllClients(JSON.stringify({ error: errorTexto }));
+
+//     // Cierra el navegador
+//     await browser.close();
+
+//     // Devuelve la respuesta de error y termina la ejecución
+//     return res.status(500).json({ error: errorTexto });
+// }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+       
 
         // Captcha
         const resultadoCaptcha = await generarNuevaImagenCaptcha(page);
-
         if (!resultadoCaptcha.success) {
             await browser.close();
             return res.status(500).json({ error: resultadoCaptcha.message });
+        }else{
+
+            enviarActualizacion({ message: 'Imagen generada correctamente.' });
+
+
+        }
+
+        await page.waitForTimeout(5000);
+
+
+
+
+        const clase = await obtenerClase(page, 'RegularExpressionValidator1');
+        console.log(`El elemento es visible.`,clase);
+        
+        // Mostrar el texto obtenido
+        if (clase === "visible") {
+          
+            console.log(`El elemento es visible.`);
+
+            // Envía un mensaje de error al cliente
+            sendToAllClients(JSON.stringify({ error: 'El elemento está oculto' })); // Asegúrate de definir esta función
+        
+            // Cierra el navegador
+            await browser.close();
+        
+            // Devuelve la respuesta de error y termina la ejecución
+            return res.status(500).json({ error: 'El elemento está oculto' });
+        
+        } else if (clase === "hidden") {
+
+            console.log(`Texto del error: El elemento está oculto.`);
+
+
+        
+            // Si hay un mensaje de error que necesitas enviar al cliente
+            sendToAllClients(JSON.stringify({ error: 'Mensaje de error' })); // Asegúrate de definir esta función
+
+
+        } else {
+            console.log('El elemento no está visible o no existe.');
+        
+            await browser.close(); // Cerrar el navegador si no se encuentra el elemento
+            return res.status(404).json({ error: 'Elemento no encontrado' });
+        }
+        
+        
+
+
+
+
+        const captchaResultado = await descargarCaptcha(page);
+        let codigoCaptcha;
+        let idCaptcha ; // ID del CAPTCHA
+
+        
+        if (!captchaResultado.success) {
+            console.error(captchaResultado.message);
+            await browser.close();
+            return res.status(500).json({ error: captchaResultado.message });
+        } else {
+            console.log('Captcha descargado correctamente');
+        
+            // Resuelve el CAPTCHA y asigna el resultado
+            const respuestaCaptcha = await resolverCaptcha(captchaResultado.screenshot);
+        
+            if (respuestaCaptcha) {
+                // Asignar los valores de la respuesta del CAPTCHA
+                codigoCaptcha = respuestaCaptcha.data; // Código del CAPTCHA resuelto
+                 idCaptcha = respuestaCaptcha.id; // ID del CAPTCHA
+        
+                await ingresarCodigoCaptcha(page, codigoCaptcha);
+
+                // await ingresarCodigoCaptcha(page, "34562");
+
+
+        
+            } else {
+                throw new Error('No se pudo resolver el CAPTCHA');
+            }
         }
 
 
 
 
 
+        await enviarFormulario(page);
+
+        // Esperar un tiempo para dar oportunidad a que se abra la nueva pestaña
+        await page.waitForTimeout(2000); // Ajusta este valor si es necesario
 
 
 
-        await page.waitForTimeout(5000);
 
-        const captchaPath = await descargarCaptcha(page);
+
+
+
+
+
+ // Verifica si el atributo style contiene 'visibility:hidden' después de hacer clic en el botón
+ const esOculto = await verificarVisibilidad(page, 'Capcha_ctl00');
+ console.log(`Estado del captcha: `, esOculto ? 'Oculto (todo bien)' : 'Visible (error)');
+
+ // Si el captcha no está oculto (es decir, no contiene 'visibility:hidden')
+ if (!esOculto) {
+     console.log(`El código ingresado no es válido.`);
+
+     // Envía un mensaje de error al cliente
+     sendToAllClients(JSON.stringify({ error: 'El código ingresado no es válido' })); // Asegúrate de definir esta función
+
+     // Cierra el navegador
+     await browser.close();
+
+     // Devuelve la respuesta de error
+     return res.status(500).json({ error: 'El código ingresado no es válido' });
+
+ } else {
+     console.log(`El captcha está oculto, todo está bien.`);
+
+     // Si el captcha está oculto, puedes continuar con el flujo normal
+     // ...
+
+ }
+
+
+
+
+// Procesar el formulario
+const resultado = await procesarFormulario(page, clientId);
+
+// Manejo de la respuesta según el resultado
+if (resultado.error) {
+    // Si hay un error, enviar un mensaje al cliente
+    console.log('Error en el proceso:', resultado.error);
+    
+    // Cerrar el navegador
+    await browser.close();
+    
+    // Responder con un error claro al cliente
+    return res.status(400).json({
+        mensaje: 'Error al procesar el formulario',
+        error: resultado.error // Aquí se envía el mensaje de error específico
+    });
+}
+
+// Si no hay error, continuar con el flujo normal
+const datos = resultado.datos;
+
+// Asegúrate de que `codigoCaptcha` esté accesible aquí
+const datosCapturados = {
+    datosBasicos: datos.datosBasicos,
+    datosAfiliacion: datos.datosAfiliacion,
+    fechaProceso: datos.fechaProceso,
+    respuestaCaptcha: {
+        status: 1,
+        id: idCaptcha, // Aquí obtienes el id de la respuesta de 2Captcha
+        data: codigoCaptcha,
+    }
+};
+
+// Aquí también puedes imprimir para verificar
+console.log('Datos capturados:', datosCapturados);
+
+// Cerrar el navegador
+await browser.close();
+
+// Responder al cliente con los datos capturados
+res.status(200).json({
+    mensaje: 'Formulario procesado correctamente',
+    datos: datosCapturados
+});
+
+
+
+
 
 
 
@@ -428,26 +759,14 @@ app.post('/api/procesar', async (req, res) => {
 
 
         
-        const codigoCaptcha = await resolverCaptcha(captchaPath);
-
-        if (codigoCaptcha) {
-            await ingresarCodigoCaptcha(page, codigoCaptcha);
-        } else {
-            throw new Error('No se pudo resolver el CAPTCHA');
-        }
-
-        // Procesar el formulario
-        const datos = await procesarFormulario(page, clientId); // Completa con tu lógica
-        await browser.close();
-
-        res.status(200).json({
-            mensaje: 'Formulario procesado correctamente',
-            datos: datos
-        });
     } catch (error) {
         console.error('Error en el proceso:', error);
         res.status(500).send('Error al procesar el formulario');
     }
+
+
+
+
 });
 
 // Inicia el servidor
