@@ -42,7 +42,7 @@ async function realizarSolicitud() {
             },
             // body: JSON.stringify({ clientId: '123454', clientType: 'CC' }), // Cuerpo de la solicitud
 
-            body: JSON.stringify({ clientId: '1130608127', clientType: 'CC' }), // Cuerpo de la solicitud
+            body: JSON.stringify({ clientId: '1022984543', clientType: 'CC' }), // Cuerpo de la solicitud
 
         });
 

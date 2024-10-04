@@ -19,47 +19,49 @@ let clients = [];
 
 
 
-// Función para resolver el CAPTCHA
-async function resolverCaptcha(captchaImageBuffer) {
-    const apiKey = '3bb0ce42560f7ce77d0fe0fe1c633238'; // Reemplaza con tu clave API de 2Captcha
-    const solver = new TwoCaptcha.Solver(apiKey);
-
-    try {
-        // Verifica si el buffer de la imagen CAPTCHA está definido
-        if (!captchaImageBuffer) {
-            console.error("El buffer de la imagen CAPTCHA no está definido.");
-            return null;
-        }
-
-        // Convierte el buffer de la imagen a base64
-        const imageBase64 = captchaImageBuffer.toString('base64');
-
-        // Envía el CAPTCHA a 2Captcha
-        const response = await solver.imageCaptcha({
-            body: imageBase64,
-            numeric: 1, // Indica que el captcha puede contener números
-            min_len: 5, // Longitud mínima de la respuesta
-            max_len: 5, // Longitud máxima de la respuesta
-        });
-
-        console.log("Respuesta de 2Captcha:", response);
-
-        // Verifica el estado de la respuesta
-        if (response.status === 1) {
-            // return response.data; // Devuelve el código del CAPTCHA resuelto
 
 
-            return {data: response.status, data: response.data, id: response.id}; // Devuelve el código del CAPTCHA resuelto junto con el id
+// // Función para resolver el CAPTCHA
+// async function resolverCaptcha(captchaImageBuffer) {
+//     const apiKey = '3bb0ce42560f7ce77d0fe0fe1c633238'; // Reemplaza con tu clave API de 2Captcha
+//     const solver = new TwoCaptcha.Solver(apiKey);
 
-        } else {
-            console.error("Error al enviar CAPTCHA:", response.request);
-            return null;
-        }
-    } catch (error) {
-        console.error("Error en la solicitud a 2Captcha:", error.message);
-        return null;
-    }
-}
+//     try {
+//         // Verifica si el buffer de la imagen CAPTCHA está definido
+//         if (!captchaImageBuffer) {
+//             console.error("El buffer de la imagen CAPTCHA no está definido.");
+//             return null;
+//         }
+
+//         // Convierte el buffer de la imagen a base64
+//         const imageBase64 = captchaImageBuffer.toString('base64');
+
+//         // Envía el CAPTCHA a 2Captcha
+//         const response = await solver.imageCaptcha({
+//             body: imageBase64,
+//             numeric: 1, // Indica que el captcha puede contener números
+//             min_len: 5, // Longitud mínima de la respuesta
+//             max_len: 5, // Longitud máxima de la respuesta
+//         });
+
+//         console.log("Respuesta de 2Captcha:", response);
+
+//         // Verifica el estado de la respuesta
+//         if (response.status === 1) {
+//             // return response.data; // Devuelve el código del CAPTCHA resuelto
+
+
+//             return {data: response.status, data: response.data, id: response.id}; // Devuelve el código del CAPTCHA resuelto junto con el id
+
+//         } else {
+//             console.error("Error al enviar CAPTCHA:", response.request);
+//             return null;
+//         }
+//     } catch (error) {
+//         console.error("Error en la solicitud a 2Captcha:", error.message);
+//         return null;
+//     }
+// }
 
 
 
@@ -267,51 +269,65 @@ async function obtenerFechaProceso(nuevaPagina) {
 
 
 
-// // Función modificada para devolver los datos capturados
-// async function procesarFormulario(page, clientId) {
-//     try {
-       
 
-//         // Obtener todas las pestañas abiertas
-//         const pages = await page.context().pages();
+// Función para resolver el CAPTCHA y obtener el saldo
+async function resolverCaptcha(captchaImageBuffer) {
+    const apiKey = '3bb0ce42560f7ce77d0fe0fe1c633238'; // Reemplaza con tu clave API de 2Captcha
+    const solver = new TwoCaptcha.Solver(apiKey);
 
-//         // Filtrar la nueva pestaña basándonos en la URL que sabemos que se abre
-//         const nuevaPagina = pages.find(p => p.url().includes('RespuestaConsulta.aspx'));
+    try {
+        if (!captchaImageBuffer) {
+            console.error("El buffer de la imagen CAPTCHA no está definido.");
+            return { success: false, error: "Buffer de CAPTCHA no definido." };
+        }
 
-//         if (!nuevaPagina) {
-//             throw new Error('No se encontró la nueva pestaña');
-//         }
+        const imageBase64 = captchaImageBuffer.toString('base64');
 
-//         // Esperar a que los selectores necesarios estén presentes
-//         await Promise.all([
-//             nuevaPagina.waitForSelector('#GridViewBasica', { timeout: 10000 }), // Espera hasta 10 segundos por el selector
-//             nuevaPagina.waitForSelector('#GridViewAfiliacion', { timeout: 10000 }),
-//             nuevaPagina.waitForSelector('#lblProceso', { timeout: 10000 })
-//         ]);
+        const response = await solver.imageCaptcha({
+            body: imageBase64,
+            numeric: 1,
+            min_len: 5,
+            max_len: 5
+        });
 
-//         // Capturar los datos de la nueva pestaña
-//         const datosBasicos = await obtenerDatosBasicos(nuevaPagina);
-//         const datosAfiliacion = await obtenerDatosAfiliacion(nuevaPagina);
-//         const fechaProceso = await obtenerFechaProceso(nuevaPagina);
+        console.log("Respuesta de 2Captcha:", response);
 
-//         // Estructurar los datos capturados
-//         const datosCapturados = {
-//             datosBasicos,
-//             datosAfiliacion,
-//             fechaProceso
-//         };
+        if (response.status === 1) {
+            const saldo = await obtenerSaldo(apiKey);
+            return {
+                success: true,
+                data: response.data,
+                id: response.id,
+                saldo: saldo || "No se pudo obtener el saldo"
+            };
+        } else {
+            console.error("Error al enviar CAPTCHA:", response.request);
+            return { success: false, error: "Error al enviar CAPTCHA." };
+        }
+    } catch (error) {
+        console.error("Error en la solicitud a 2Captcha:", error.message);
+        return { success: false, error: error.message };
+    }
+}
 
-//         // (Opcional) Procesar los datos capturados según sea necesario
-//         console.log('Datos capturados:', datosCapturados);
+// Función para obtener el saldo de 2Captcha
+async function obtenerSaldo(apiKey) {
+    try {
+        const saldoResponse = await fetch(`http://2captcha.com/res.php?key=${apiKey}&action=getbalance&json=1`);
+        const saldoData = await saldoResponse.json();
 
-//         // Retornar los datos capturados
-//         return datosCapturados;
-
-//     } catch (error) {
-//         console.error('Error al procesar la nueva página:', error);
-//         throw error;
-//     }
-// }
+        if (saldoData.status === 1) {
+            console.log("Saldo disponible:", saldoData.request);
+            return saldoData.request;
+        } else {
+            console.error("Error al obtener el saldo:", saldoData.request);
+            return null;
+        }
+    } catch (error) {
+        console.error("Error en la solicitud de saldo a 2Captcha:", error.message);
+        return null;
+    }
+}
 
 
 
@@ -332,12 +348,14 @@ async function procesarFormulario(page, clientId) {
             return { error: errorMessage }; // Retornar error para manejarlo después
         }
 
-        // Verificar si hay un mensaje de error en la nueva pestaña
+
+
+        // Verificar si hay un mensaje en el label de error
         const errorLabel = await nuevaPagina.$('#lblError');
         if (errorLabel) {
             const errorMessage = await errorLabel.evaluate(el => el.textContent);
-            console.error('Error encontrado:', errorMessage);
-            return { error: errorMessage }; // Retornar error para manejarlo después
+            console.warn('Advertencia encontrada en lblError:', errorMessage); // Mostrar como advertencia
+            return { advertencia: errorMessage }; // Retornar advertencia y finalizar
         }
 
         // Si no hay error, esperar a que los selectores necesarios estén presentes
@@ -370,6 +388,18 @@ async function procesarFormulario(page, clientId) {
         return { error: error.message }; // Retornar error para manejarlo después
     }
 }
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -532,44 +562,6 @@ app.post('/api/procesar', async (req, res) => {
 
 
 
-
-
-
-
-
-
-
-
-// // Verificar si el error está presente
-// const errorTexto = await verificarErrorNumeroIdentificacion(page);
-
-// // Dentro del bloque donde manejas el error
-// if (errorTexto) {
-//     console.log('El mensaje de error está presente:', errorTexto);
-
-//     // Envía un mensaje de error al cliente
-//     sendToAllClients(JSON.stringify({ error: errorTexto }));
-
-//     // Cierra el navegador
-//     await browser.close();
-
-//     // Devuelve la respuesta de error y termina la ejecución
-//     return res.status(500).json({ error: errorTexto });
-// }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
        
 
         // Captcha
@@ -598,13 +590,13 @@ app.post('/api/procesar', async (req, res) => {
             console.log(`El elemento es visible.`);
 
             // Envía un mensaje de error al cliente
-            sendToAllClients(JSON.stringify({ error: 'El elemento está oculto' })); // Asegúrate de definir esta función
+            sendToAllClients(JSON.stringify({ error: 'Numero de Indenficacion No Valido' })); 
         
             // Cierra el navegador
             await browser.close();
         
             // Devuelve la respuesta de error y termina la ejecución
-            return res.status(500).json({ error: 'El elemento está oculto' });
+            return res.status(500).json({ error: 'Error  en el nuemero de identificacion' });
         
         } else if (clase === "hidden") {
 
@@ -613,33 +605,35 @@ app.post('/api/procesar', async (req, res) => {
 
         
             // Si hay un mensaje de error que necesitas enviar al cliente
-            sendToAllClients(JSON.stringify({ error: 'Mensaje de error' })); // Asegúrate de definir esta función
+            sendToAllClients(JSON.stringify({ message: 'Numero de identificacion valido' })); // Asegúrate de definir esta función
 
 
         } else {
             console.log('El elemento no está visible o no existe.');
         
             await browser.close(); // Cerrar el navegador si no se encuentra el elemento
-            return res.status(404).json({ error: 'Elemento no encontrado' });
+            return res.status(404).json({ error: 'Elemento numero de indentificacion no encontro' });
         }
         
         
 
 
+        sendToAllClients(JSON.stringify({ message: 'Intentado descargar  Captcha' })); // Asegúrate de definir esta función
 
 
         const captchaResultado = await descargarCaptcha(page);
         let codigoCaptcha;
         let idCaptcha ; // ID del CAPTCHA
+        let saldo;
 
-        
         if (!captchaResultado.success) {
             console.error(captchaResultado.message);
             await browser.close();
             return res.status(500).json({ error: captchaResultado.message });
         } else {
             console.log('Captcha descargado correctamente');
-        
+            sendToAllClients(JSON.stringify({ message: 'Captcha descargado correctamente' })); // Asegúrate de definir esta función
+
             // Resuelve el CAPTCHA y asigna el resultado
             const respuestaCaptcha = await resolverCaptcha(captchaResultado.screenshot);
         
@@ -647,7 +641,12 @@ app.post('/api/procesar', async (req, res) => {
                 // Asignar los valores de la respuesta del CAPTCHA
                 codigoCaptcha = respuestaCaptcha.data; // Código del CAPTCHA resuelto
                  idCaptcha = respuestaCaptcha.id; // ID del CAPTCHA
+                 saldo = respuestaCaptcha.saldo; // ID del CAPTCHA
+
         
+                 sendToAllClients(JSON.stringify({ message: 'Ingresando Captcha' })); // Asegúrate de definir esta función
+
+
                 await ingresarCodigoCaptcha(page, codigoCaptcha);
 
                 // await ingresarCodigoCaptcha(page, "34562");
@@ -655,12 +654,23 @@ app.post('/api/procesar', async (req, res) => {
 
         
             } else {
-                throw new Error('No se pudo resolver el CAPTCHA');
+                sendToAllClients(JSON.stringify({ error: 'No se pudo resolver el CAPTCHA' })); // Asegúrate de definir esta función
+
+                console.error('Error: No se pudo resolver el CAPTCHA');
+                sendToAllClients(JSON.stringify({ error: 'No se pudo resolver el CAPTCHA' }));
+        
+                // Cerrar el navegador y responder al cliente
+                await browser.close();
+                return res.status(400).json({
+                    mensaje: 'Error al resolver el CAPTCHA',
+                    error: 'No se pudo resolver el CAPTCHA',
+                });
             }
         }
 
 
 
+        sendToAllClients(JSON.stringify({ message: ' Enviando Informacion' })); // Asegúrate de definir esta función
 
 
         await enviarFormulario(page);
@@ -696,10 +706,22 @@ app.post('/api/procesar', async (req, res) => {
  } else {
      console.log(`El captcha está oculto, todo está bien.`);
 
-     // Si el captcha está oculto, puedes continuar con el flujo normal
-     // ...
+     sendToAllClients(JSON.stringify({ message: ' Captcha Validado correctamente' })); // Asegúrate de definir esta función
 
  }
+
+ sendToAllClients(JSON.stringify({ message: 'Esperando Informacion del afiliado' })); // Asegúrate de definir esta función
+
+// / Asegúrate de que `codigoCaptcha` esté accesible aquí
+
+const respuestaCaptcha  = {
+   
+    status: 1,
+    id: idCaptcha, // Aquí obtienes el id de la respuesta de 2Captcha
+    data: codigoCaptcha,
+    saldo: saldo
+
+};
 
 
 
@@ -711,16 +733,25 @@ const resultado = await procesarFormulario(page, clientId);
 if (resultado.error) {
     // Si hay un error, enviar un mensaje al cliente
     console.log('Error en el proceso:', resultado.error);
-    
-    // Cerrar el navegador
-    await browser.close();
-    
-    // Responder con un error claro al cliente
+
+    // Responder con un error claro al cliente e incluir los datos del captcha (si los tienes disponibles)
     return res.status(400).json({
         mensaje: 'Error al procesar el formulario',
-        error: resultado.error // Aquí se envía el mensaje de error específico
+        error: resultado.error, // Aquí se envía el mensaje de error específico
+        datosCaptcha: respuestaCaptcha // Aquí incluyes la respuestaCaptcha si está disponible
+    });
+} else if (resultado.advertencia) {
+    // Si hay una advertencia, notificar al cliente pero sin marcarlo como error
+    console.log('Advertencia en el proceso:', resultado.advertencia);
+
+    // Responder con un estado 200 indicando que el proceso tuvo una advertencia
+    return res.status(200).json({
+        mensaje: 'Advertencia al procesar el formulario',
+        advertencia: resultado.advertencia, // Aquí se envía el mensaje de advertencia
+        datosCaptcha: respuestaCaptcha // Aquí incluyes la respuestaCaptcha si está disponible
     });
 }
+
 
 // Si no hay error, continuar con el flujo normal
 const datos = resultado.datos;
@@ -730,15 +761,10 @@ const datosCapturados = {
     datosBasicos: datos.datosBasicos,
     datosAfiliacion: datos.datosAfiliacion,
     fechaProceso: datos.fechaProceso,
-    respuestaCaptcha: {
-        status: 1,
-        id: idCaptcha, // Aquí obtienes el id de la respuesta de 2Captcha
-        data: codigoCaptcha,
-    }
+   
 };
 
-// Aquí también puedes imprimir para verificar
-console.log('Datos capturados:', datosCapturados);
+
 
 // Cerrar el navegador
 await browser.close();
@@ -746,9 +772,9 @@ await browser.close();
 // Responder al cliente con los datos capturados
 res.status(200).json({
     mensaje: 'Formulario procesado correctamente',
-    datos: datosCapturados
+    datosAfiliado: datosCapturados,
+    datosCaptcha: respuestaCaptcha 
 });
-
 
 
 
